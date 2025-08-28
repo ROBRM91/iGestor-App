@@ -822,7 +822,7 @@ function openPaymentModal(conceptoId = '', monto = 0) {
         const transaction = data.transacciones.find(t =>
             t.ID_Concepto_FK === c.ID_Concepto &&
             t.ID_TipoMovimiento_FK === 'TM-002' && // Solo gastos
-            t.Estatus === 'Pendiente'
+            t.Estatus === 'Pendiente' // Asegurarse de que el estado sea 'Pendiente'
         );
         return transaction !== undefined;
     });
