@@ -1,0 +1,91 @@
+/* style.css */
+
+body {
+    font-family: "Inter", sans-serif;
+    background-color: #f8f9fa; /* Color de fondo ligero */
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.nav-link.active {
+    font-weight: bold;
+    color: #ffffff !important;
+}
+
+.card {
+    border-radius: 0.75rem; /* Bordes redondeados */
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px); /* Efecto de elevación al pasar el ratón */
+}
+
+.card-title {
+    font-weight: 600;
+    font-size: 1.15rem;
+}
+
+.card-text {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.card.border-success { border-left: 5px solid var(--bs-success) !important; }
+.card.border-danger { border-left: 5px solid var(--bs-danger) !important; }
+.card.border-primary { border-left: 5px solid var(--bs-primary) !important; }
+.card.border-info { border-left: 5px solid var(--bs-info) !important; }
+.card.border-warning { border-left: 5px solid var(--bs-warning) !important; }
+
+/* Estilos para el título de la sección */
+h1, h2, h3, h4 {
+    margin-bottom: 1.5rem;
+}
+
+/* Estilos para las tablas */
+.table th, .table td {
+    vertical-align: middle;
+}
+
+.table th {
+    background-color: #e9ecef;
+    font-weight: 600;
+    color: #343a40;
+}
+
+/* Formulario de transacciones y datos base */
+.form-section {
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+/* Estilos para los filtros de la tabla de transacciones */
+.filter-row .form-control, .filter-row .form-select {
+    border-radius: 0.5rem;
+}
+
+/* Clase para ocultar elementos */
+.d-none {
+    display: none !important;
+}
+
+/* Chart container */
+.chart-container {
+    max-width: 100%; /* Asegura que el gráfico sea responsivo */
+    height: 400px; /* Altura fija para el gráfico */
+}
+
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px;
+    }
+}
