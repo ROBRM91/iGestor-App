@@ -31,7 +31,24 @@ function loadData() {
             { ID_TipoCosto: 'TC-003', TipoCosto: 'Recurrente', ID_TipoMovimiento_FK: 'TM-001' },
             { ID_TipoCosto: 'TC-004', TipoCosto: 'Único', ID_TipoMovimiento_FK: 'TM-001' }
         ];
-        // Más datos de ejemplo para Categorías, SubCategorías, Conceptos si es necesario
+        data.categorias = [
+            { ID_Categoria: 'CAT-001', Categoría: 'Alimentos', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-002' },
+            { ID_Categoria: 'CAT-002', Categoría: 'Transporte', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-002' },
+            { ID_Categoria: 'CAT-003', Categoría: 'Servicios', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-001' },
+            { ID_Categoria: 'CAT-004', Categoría: 'Salario', ID_TipoMovimiento_FK: 'TM-001', ID_TipoCosto_FK: 'TC-003' }
+        ];
+        data.subCategorias = [
+            { ID_SubCategoria: 'SBC-001', SubCategoria: 'Supermercado', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-002', ID_Categoria_FK: 'CAT-001' },
+            { ID_SubCategoria: 'SBC-002', SubCategoria: 'Gasolina', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-002', ID_Categoria_FK: 'CAT-002' },
+            { ID_SubCategoria: 'SBC-003', SubCategoria: 'Electricidad', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-001', ID_Categoria_FK: 'CAT-003' },
+            { ID_SubCategoria: 'SBC-004', SubCategoria: 'Nómina', ID_TipoMovimiento_FK: 'TM-001', ID_TipoCosto_FK: 'TC-003', ID_Categoria_FK: 'CAT-004' }
+        ];
+        data.conceptos = [
+            { ID_Concepto: 'CON-001', Concepto: 'Compra semanal', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-002', ID_Categoria_FK: 'CAT-001', ID_SubCategoria_FK: 'SBC-001' },
+            { ID_Concepto: 'CON-002', Concepto: 'Recarga de gasolina', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-002', ID_Categoria_FK: 'CAT-002', ID_SubCategoria_FK: 'SBC-002' },
+            { ID_Concepto: 'CON-003', Concepto: 'Recibo de luz', ID_TipoMovimiento_FK: 'TM-002', ID_TipoCosto_FK: 'TC-001', ID_Categoria_FK: 'CAT-003', ID_SubCategoria_FK: 'SBC-003' },
+            { ID_Concepto: 'CON-004', Concepto: 'Pago de quincena', ID_TipoMovimiento_FK: 'TM-001', ID_TipoCosto_FK: 'TC-003', ID_Categoria_FK: 'CAT-004', ID_SubCategoria_FK: 'SBC-004' }
+        ];
     }
     console.log("Datos cargados:", data);
 }
@@ -117,17 +134,32 @@ function updateTransactionCalculations() {
     const today = new Date().toISOString().split('T')[0]; // Fecha actual para NoPlazos
 
     data.transacciones.forEach(transaccion => {
-        if (transaccion.ID_TipoMovimiento_FK === 'TM-002') { // Solo para Gastos
-            const { fechaCorte, fechaLimite } = calcularFechasCorteLimite(
-                parseInt(transaccion.DiaCorte),
-                parseInt(transaccion.DiaLimite),
-                parseInt(transaccion.Periodo.split('-')[1]), // Mes
-                parseInt(transaccion.Periodo.split('-')[0])  // Año
-            );
-            transaccion.FechaCorte = fechaCorte;
-            transaccion.FechaLimite = fechaLimite;
-            transaccion.NoPlazos = calcularNoPlazos(today, fechaLimite);
-            transaccion.Prioridad = determinarPrioridad(transaccion.NoPlazos);
+        // Solo para Gastos se calculan fechas y prioridad
+        if (transaccion.ID_TipoMovimiento_FK === 'TM-002') {
+            // Asegurarse de que DiaCorte y DiaLimite sean números válidos
+            const diaCorteNum = parseInt(transaccion.DiaCorte);
+            const diaLimiteNum = parseInt(transaccion.DiaLimite);
+            const periodoMesNum = parseInt(transaccion.Periodo.split('-')[1]);
+            const periodoAnioNum = parseInt(transaccion.Periodo.split('-')[0]);
+
+            if (!isNaN(diaCorteNum) && !isNaN(diaLimiteNum) && !isNaN(periodoMesNum) && !isNaN(periodoAnioNum)) {
+                const { fechaCorte, fechaLimite } = calcularFechasCorteLimite(
+                    diaCorteNum,
+                    diaLimiteNum,
+                    periodoMesNum,
+                    periodoAnioNum
+                );
+                transaccion.FechaCorte = fechaCorte;
+                transaccion.FechaLimite = fechaLimite;
+                transaccion.NoPlazos = calcularNoPlazos(today, fechaLimite);
+                transaccion.Prioridad = determinarPrioridad(transaccion.NoPlazos);
+            } else {
+                // Si faltan datos, limpiar campos relacionados
+                transaccion.FechaCorte = '';
+                transaccion.FechaLimite = '';
+                transaccion.NoPlazos = '';
+                transaccion.Prioridad = '';
+            }
         } else { // Para Ingresos, borrar o dejar vacíos
             transaccion.FechaCorte = '';
             transaccion.FechaLimite = '';
@@ -867,7 +899,14 @@ function handlePaymentSubmit(event) {
 
     if (!isFormValid) {
         form.classList.add('was-validated');
-        console.warn("La validación del formulario falló. No se enviará el pago."); // Log de depuración
+        console.warn("La validación del formulario falló. No se enviará el pago.");
+
+        // Añadir logs específicos para depurar por qué falla la validación
+        const paymentConcepto = document.getElementById('paymentConcepto').value;
+        const paymentMonto = document.getElementById('paymentMonto').value;
+        if (!paymentConcepto) console.error("Error de validación: El campo 'Concepto' está vacío.");
+        if (!paymentMonto) console.error("Error de validación: El campo 'Monto del Pago' está vacío.");
+
         return;
     }
 
@@ -1333,7 +1372,7 @@ function resetBaseDataForm(formId, idFieldId) {
                 }
                 if (selectId === 'conCategoriaFK') {
                     const dependentSubCategoriaSelect = document.getElementById('conSubCategoriaFK');
-                    if (dependentSubCategoriaSelect) dependentSubCategoriaSelect.innerHTML = '<option value="">Seleccione...</option>';
+                    if (dependentSubCategoriaSelect) dependentSubCategoriaSelect.innerHTML = '<option value="">Seleccione壟</option>';
                 }
             }
         });
@@ -1345,7 +1384,6 @@ function resetBaseDataForm(formId, idFieldId) {
             filterBaseDataOptions('conTipoMovimientoFK', 'conTipoCostoFK', data.tipoCostos, 'ID_TipoCosto', 'TipoCosto', 'ID_TipoMovimiento_FK');
             filterBaseDataOptions(['scTipoMovimientoFK', 'scTipoCostoFK'], 'scCategoriaFK', data.categorias, 'ID_Categoria', 'Categoría', ['ID_TipoMovimiento_FK', 'ID_TipoCosto_FK']);
             filterBaseDataOptions(['conTipoMovimientoFK', 'conTipoCostoFK'], 'conCategoriaFK', data.categorias, 'ID_Categoria', 'Categoría', ['ID_TipoMovimiento_FK', 'ID_TipoCosto_FK']);
-            filterBaseDataOptions(['conTipoMovimientoFK', 'conTipoCostoFK', 'conCategoriaFK'], 'conSubCategoriaFK', data.subCategorias, 'ID_SubCategoria', 'SubCategoria', ['ID_TipoMovimiento_FK', 'ID_TipoCosto_FK', 'ID_Categoria_FK']);
         }
     }
 }
