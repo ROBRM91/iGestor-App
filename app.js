@@ -935,13 +935,14 @@ function handlePaymentSubmit(event) {
 
     const paymentModalElement = document.getElementById('paymentModal');
     if (paymentModalElement) {
-        const paymentModal = bootstrap.Modal.getInstance(paymentModalElement);
-        if (paymentModal) {
-            paymentModal.hide(); // Cerrar modal
-            console.log("Modal de pago oculto."); // Log de depuración
-        } else {
-            console.warn("No se pudo obtener la instancia del modal de Bootstrap para paymentModal.");
+        let paymentModal = bootstrap.Modal.getInstance(paymentModalElement);
+        if (!paymentModal) {
+            // Si la instancia no existe, la creamos
+            paymentModal = new bootstrap.Modal(paymentModalElement);
+            console.log("Nueva instancia de Bootstrap modal creada para paymentModal.");
         }
+        paymentModal.hide(); // Cerrar modal
+        console.log("Modal de pago oculto."); // Log de depuración
     } else {
         console.error("No se encontró el elemento del modal de pago.");
     }
