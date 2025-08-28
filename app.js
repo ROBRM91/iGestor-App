@@ -106,8 +106,11 @@ function determinarPrioridad(noPlazos) {
 function calcularEstatusTransaccion(transaccion) {
     const pagosRelacionados = data.pagos.filter(p => p.ID_Concepto_FK === transaccion.ID_Concepto_FK);
     const totalPagado = pagosRelacionados.reduce((sum, p) => sum + parseFloat(p.MontoPago), 0);
-    return parseFloat(transaccion.Monto) === totalPagado ? 'Pagado' : 'Pendiente';
+    // Verificar si el pago excede el monto total de la transacción
+    // Si la suma total de pagos es mayor o igual al monto de la transacción, se considera 'Pagado'
+    return parseFloat(transaccion.Monto) <= totalPagado ? 'Pagado' : 'Pendiente';
 }
+
 
 // Actualiza los cálculos en todas las transacciones
 function updateTransactionCalculations() {
@@ -739,15 +742,14 @@ function editTransaction(id) {
 function deleteTransaction(id) {
     // NOTA: La función confirm() no es compatible con el entorno Canvas.
     // Deberías reemplazarla por un modal de confirmación personalizado.
-    if (confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
-        data.transacciones = data.transacciones.filter(t => t.ID_Transaccion !== id);
-        saveData();
-        updateTransactionCalculations(); // Recalcular todo en caso de eliminacion
-        renderTransactionsTable();
-        updateDashboardSummary(); // Actualizar dashboard
-        renderProximosVencimientos();
-        renderGastosPorCategoriaChart();
-    }
+    console.warn('Se intentó eliminar una transacción. En un navegador normal, esto requeriría confirmación.');
+    data.transacciones = data.transacciones.filter(t => t.ID_Transaccion !== id);
+    saveData();
+    updateTransactionCalculations(); // Recalcular todo en caso de eliminacion
+    renderTransactionsTable();
+    updateDashboardSummary(); // Actualizar dashboard
+    renderProximosVencimientos();
+    renderGastosPorCategoriaChart();
 }
 
 // Renderiza la tabla de Transacciones
@@ -841,15 +843,31 @@ function openPaymentModal(conceptoId = '', monto = 0) {
 // Maneja el envío del formulario de pago
 function handlePaymentSubmit(event) {
     console.log("handlePaymentSubmit triggered."); // Log de depuración
-    event.preventDefault();
-    event.stopPropagation();
+    event.preventDefault(); // Previene la recarga de la página
+    event.stopPropagation(); // Detiene la propagación del evento
 
     const form = event.target;
-    console.log("Form validity:", form.checkValidity()); // Log de depuración
 
-    if (!form.checkValidity()) {
+    // Asegurarse de que el target del evento es un formulario
+    if (!(form instanceof HTMLFormElement)) {
+        console.error("Error: event.target no es un HTMLFormElement.", form);
+        return;
+    }
+
+    let isFormValid = false;
+    try {
+        isFormValid = form.checkValidity();
+        console.log("Form validity:", isFormValid); // Log de depuración
+    } catch (e) {
+        console.error("Error al verificar la validez del formulario:", e);
+        // Si hay un error al validar, marcamos el formulario como inválido visiblemente
         form.classList.add('was-validated');
-        console.warn("Form validation failed. Not submitting payment."); // Log de depuración
+        return;
+    }
+
+    if (!isFormValid) {
+        form.classList.add('was-validated');
+        console.warn("La validación del formulario falló. No se enviará el pago."); // Log de depuración
         return;
     }
 
@@ -860,15 +878,15 @@ function handlePaymentSubmit(event) {
         FechaPago: new Date().toISOString().split('T')[0] // Fecha actual del pago
     };
 
-    console.log("New payment object:", newPayment); // Log de depuración
+    console.log("Objeto de nuevo pago:", newPayment); // Log de depuración
     data.pagos.push(newPayment);
-    console.log("Payment added to data.pagos:", data.pagos); // Log de depuración
+    console.log("Pago añadido a data.pagos:", data.pagos); // Log de depuración
 
     saveData();
-    console.log("Data saved after payment."); // Log de depuración
+    console.log("Datos guardados después del pago."); // Log de depuración
 
     updateTransactionCalculations(); // Recalcular estatus de transacciones
-    console.log("Transaction calculations updated."); // Log de depuración
+    console.log("Cálculos de transacción actualizados."); // Log de depuración
 
     renderTransactionsTable();
     updateDashboardSummary(); // Actualizar dashboard
@@ -881,14 +899,14 @@ function handlePaymentSubmit(event) {
         const paymentModal = bootstrap.Modal.getInstance(paymentModalElement);
         if (paymentModal) {
             paymentModal.hide(); // Cerrar modal
-            console.log("Payment modal hidden."); // Log de depuración
+            console.log("Modal de pago oculto."); // Log de depuración
         } else {
-            console.warn("Could not get Bootstrap modal instance for paymentModal.");
+            console.warn("No se pudo obtener la instancia del modal de Bootstrap para paymentModal.");
         }
     } else {
-        console.error("Payment modal element not found.");
+        console.error("No se encontró el elemento del modal de pago.");
     }
-    console.log("handlePaymentSubmit finished."); // Log de depuración
+    console.log("handlePaymentSubmit finalizado."); // Log de depuración
 }
 
 
@@ -1387,41 +1405,40 @@ function editBaseDataItem(dataKey, idKey, item) {
 function deleteBaseDataItem(dataKey, idKey, id) {
     // NOTA: La función confirm() no es compatible con el entorno Canvas.
     // Deberías reemplazarla por un modal de confirmación personalizado.
-    if (confirm(`¿Estás seguro de que quieres eliminar este elemento? Ten en cuenta que esto podría afectar a las transacciones.`)) {
-        data[dataKey] = data[dataKey].filter(item => item[idKey] !== id);
+    console.warn(`Se intentó eliminar el elemento con ID ${id} de ${dataKey}. En un navegador normal, esto requeriría confirmación.`);
+    data[dataKey] = data[dataKey].filter(item => item[idKey] !== id);
+    saveData();
+    updateTransactionCalculations(); // Recalcular todo en caso de eliminacion
+    // Re-renderizar todas las tablas para reflejar los cambios
+    renderTipoMovimientoTable();
+    renderTipoCostoTable();
+    renderCategoriaTable();
+    renderSubCategoriaTable();
+    renderConceptoTable();
+    updateDashboardSummary(); // Actualizar dashboard
+    renderProximosVencimientos();
+    renderGastosPorCategoriaChart();
+
+    // Si eliminamos un tipo de movimiento, costo, categoría o subcategoría,
+    // necesitamos limpiar las transacciones que dependan de ellos
+    if (dataKey === 'tipoMovimientos' || dataKey === 'tipoCostos' || dataKey === 'categorias' || dataKey === 'subCategorias' || dataKey === 'conceptos') {
+        data.transacciones = data.transacciones.filter(t => {
+            if (dataKey === 'tipoMovimientos' && t.ID_TipoMovimiento_FK === id) return false;
+            if (dataKey === 'tipoCostos' && t.ID_TipoCosto_FK === id) return false;
+            // Para Conceptos, necesitaríamos más lógica para verificar si su categoría/subcategoría fue eliminada
+            const concepto = data.conceptos.find(c => c.ID_Concepto === t.ID_Concepto_FK);
+            if (!concepto) return false; // Eliminar transacción si su concepto ya no existe
+
+            const categoria = data.categorias.find(c => c.ID_Categoria === concepto.ID_Categoria_FK);
+            if (!categoria) return false; // Eliminar si su categoría no existe
+
+            const subCategoria = data.subCategorias.find(sc => sc.ID_SubCategoria === concepto.ID_SubCategoria_FK);
+            if (concepto.ID_SubCategoria_FK && !subCategoria) return false; // Eliminar si su subcategoría no existe y está asignada
+
+            return true;
+        });
         saveData();
-        updateTransactionCalculations(); // Recalcular todo en caso de eliminacion
-        // Re-renderizar todas las tablas para reflejar los cambios
-        renderTipoMovimientoTable();
-        renderTipoCostoTable();
-        renderCategoriaTable();
-        renderSubCategoriaTable();
-        renderConceptoTable();
-        updateDashboardSummary(); // Actualizar dashboard
-        renderProximosVencimientos();
-        renderGastosPorCategoriaChart();
-
-        // Si eliminamos un tipo de movimiento, costo, categoría o subcategoría,
-        // necesitamos limpiar las transacciones que dependan de ellos
-        if (dataKey === 'tipoMovimientos' || dataKey === 'tipoCostos' || dataKey === 'categorias' || dataKey === 'subCategorias' || dataKey === 'conceptos') {
-            data.transacciones = data.transacciones.filter(t => {
-                if (dataKey === 'tipoMovimientos' && t.ID_TipoMovimiento_FK === id) return false;
-                if (dataKey === 'tipoCostos' && t.ID_TipoCosto_FK === id) return false;
-                // Para Conceptos, necesitaríamos más lógica para verificar si su categoría/subcategoría fue eliminada
-                const concepto = data.conceptos.find(c => c.ID_Concepto === t.ID_Concepto_FK);
-                if (!concepto) return false; // Eliminar transacción si su concepto ya no existe
-
-                const categoria = data.categorias.find(c => c.ID_Categoria === concepto.ID_Categoria_FK);
-                if (!categoria) return false; // Eliminar si su categoría no existe
-
-                const subCategoria = data.subCategorias.find(sc => sc.ID_SubCategoria === concepto.ID_SubCategoria_FK);
-                if (concepto.ID_SubCategoria_FK && !subCategoria) return false; // Eliminar si su subcategoría no existe y está asignada
-
-                return true;
-            });
-            saveData();
-            updateTransactionCalculations();
-        }
+        updateTransactionCalculations();
     }
 }
 
