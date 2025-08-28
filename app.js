@@ -737,6 +737,8 @@ function editTransaction(id) {
 
 // Elimina una transacción
 function deleteTransaction(id) {
+    // NOTA: La función confirm() no es compatible con el entorno Canvas.
+    // Deberías reemplazarla por un modal de confirmación personalizado.
     if (confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
         data.transacciones = data.transacciones.filter(t => t.ID_Transaccion !== id);
         saveData();
@@ -809,13 +811,21 @@ function renderTransactionsTable() {
 
 // Abre el modal de pagos con un concepto preseleccionado si se llama desde Vencimientos
 function openPaymentModal(conceptoId = '', monto = 0) {
+    console.log("Opening payment modal. Concepto ID:", conceptoId, "Monto:", monto); // Log de depuración
     const paymentConceptoSelect = document.getElementById('paymentConcepto');
     const paymentMontoInput = document.getElementById('paymentMonto');
 
-    populateSelect('paymentConcepto', data.conceptos.filter(c => {
-        const transaction = data.transacciones.find(t => t.ID_Concepto_FK === c.ID_Concepto && t.ID_TipoMovimiento_FK === 'TM-002' && t.Estatus === 'Pendiente');
+    // Filtrar conceptos para el modal de pagos: solo gastos pendientes
+    const conceptosGastosPendientes = data.conceptos.filter(c => {
+        const transaction = data.transacciones.find(t =>
+            t.ID_Concepto_FK === c.ID_Concepto &&
+            t.ID_TipoMovimiento_FK === 'TM-002' && // Solo gastos
+            t.Estatus === 'Pendiente'
+        );
         return transaction !== undefined;
-    }), 'ID_Concepto', 'Concepto');
+    });
+
+    populateSelect('paymentConcepto', conceptosGastosPendientes, 'ID_Concepto', 'Concepto');
 
     if (conceptoId) {
         paymentConceptoSelect.value = conceptoId;
@@ -830,12 +840,16 @@ function openPaymentModal(conceptoId = '', monto = 0) {
 
 // Maneja el envío del formulario de pago
 function handlePaymentSubmit(event) {
+    console.log("handlePaymentSubmit triggered."); // Log de depuración
     event.preventDefault();
     event.stopPropagation();
 
     const form = event.target;
+    console.log("Form validity:", form.checkValidity()); // Log de depuración
+
     if (!form.checkValidity()) {
         form.classList.add('was-validated');
+        console.warn("Form validation failed. Not submitting payment."); // Log de depuración
         return;
     }
 
@@ -846,18 +860,35 @@ function handlePaymentSubmit(event) {
         FechaPago: new Date().toISOString().split('T')[0] // Fecha actual del pago
     };
 
+    console.log("New payment object:", newPayment); // Log de depuración
     data.pagos.push(newPayment);
+    console.log("Payment added to data.pagos:", data.pagos); // Log de depuración
+
     saveData();
+    console.log("Data saved after payment."); // Log de depuración
+
     updateTransactionCalculations(); // Recalcular estatus de transacciones
+    console.log("Transaction calculations updated."); // Log de depuración
+
     renderTransactionsTable();
     updateDashboardSummary(); // Actualizar dashboard
     renderProximosVencimientos(); // Actualizar vencimientos
     document.getElementById('paymentForm').reset();
     document.getElementById('paymentForm').classList.remove('was-validated');
-    const paymentModal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
-    if (paymentModal) {
-        paymentModal.hide(); // Cerrar modal
+
+    const paymentModalElement = document.getElementById('paymentModal');
+    if (paymentModalElement) {
+        const paymentModal = bootstrap.Modal.getInstance(paymentModalElement);
+        if (paymentModal) {
+            paymentModal.hide(); // Cerrar modal
+            console.log("Payment modal hidden."); // Log de depuración
+        } else {
+            console.warn("Could not get Bootstrap modal instance for paymentModal.");
+        }
+    } else {
+        console.error("Payment modal element not found.");
     }
+    console.log("handlePaymentSubmit finished."); // Log de depuración
 }
 
 
@@ -1354,6 +1385,8 @@ function editBaseDataItem(dataKey, idKey, item) {
 
 // Elimina un item de datos base
 function deleteBaseDataItem(dataKey, idKey, id) {
+    // NOTA: La función confirm() no es compatible con el entorno Canvas.
+    // Deberías reemplazarla por un modal de confirmación personalizado.
     if (confirm(`¿Estás seguro de que quieres eliminar este elemento? Ten en cuenta que esto podría afectar a las transacciones.`)) {
         data[dataKey] = data[dataKey].filter(item => item[idKey] !== id);
         saveData();
